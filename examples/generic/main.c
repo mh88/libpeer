@@ -101,7 +101,9 @@ int main(int argc, char* argv[]) {
 
   PeerConfiguration config = {
       .ice_servers = {
-          {.urls = "stun:stun.l.google.com:19302"},
+          // {.urls = "stun:stun.l.google.com:19302"},
+          {.urls = "stun:117.72.41.107:3478"},
+          {.urls = "turn:117.72.41.107:3478", .username = "mh88", .credential = "1115"},
       },
       .datachannel = DATA_CHANNEL_STRING,
       .video_codec = CODEC_H264,
