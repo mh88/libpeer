@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <gst/gst.h>
+// #include <gst/video/video.h>
 #include <ifaddrs.h>
 #include <net/if.h>
 #include <netinet/in.h>
@@ -16,6 +17,8 @@
 
 // const char CAMERA_PIPELINE[] = "libcamerasrc ! video/x-raw, format=(string)NV12, width=(int)1280, height=(int)960, framerate=(fraction)30/1, interlace-mode=(string)progressive, colorimetry=(string)bt709 ! v4l2h264enc capture-io-mode=4 output-io-mode=4 ! video/x-h264, stream-format=(string)byte-stream, level=(string)4, alighnment=(string)au ! h264parse config-interval=-1 ! appsink name=camera-sink";
 const char CAMERA_PIPELINE[] = "filesrc location=palace.mp4 ! qtdemux name=demux demux.video_0 ! queue ! h264parse ! video/x-h264, stream-format=byte-stream, alignment=au ! h264parse config-interval=30 ! appsink name=camera-sink";
+// const char CAMERA_PIPELINE[] = "v4l2src device=/dev/video0 ! image/jpeg,width=1280,height=720,framerate=30/1 ! nvjpegdec ! video/x-raw ! nvvidconv ! video/x-raw(memory:NVMM), format=NV12 ! nvv4l2h264enc name=my_encoder insert-sps-pps=1 insert-vui=1 preset-level=1 bitrate=500 iframeinterval=30 control-rate=1 ! h264parse config-interval=-1 ! video/x-h264,stream-format=byte-stream,alignment=au ! appsink name=camera-sink emit-signals=true sync=false drop=true";
+
 const char MIC_PIPELINE[] = "alsasrc latency-time=20000 device=plughw:seeed2micvoicec,0 ! audio/x-raw,format=S16LE,rate=8000,channels=1 ! alawenc ! appsink name=mic-sink";
 
 const char SPK_PIPELINE[] = "appsrc name=spk-src format=time ! alawdec ! audio/x-raw,format=S16LE,rate=8000,channels=1 ! alsasink sync=false device=plughw:seeed2micvoicec,0";
@@ -25,6 +28,9 @@ PeerConnection* g_pc = NULL;
 PeerConnectionState g_state;
 int g_reconnect_attempt = 0;
 time_t g_last_connected_time = 0;
+
+// 全局变量保存编码器引用
+GstElement* encoder = NULL;
 
 typedef struct Media {
   // Camera elements
@@ -180,6 +186,29 @@ static void onmessasge(char* msg, size_t len, void* user_data, uint16_t sid) {
 
 static void on_request_keyframe(void* data) {
   printf("Requesting keyframe\n");
+
+  // if (encoder) {
+  //   GstEvent *event = gst_video_event_new_downstream_force_key_unit(
+  //           GST_CLOCK_TIME_NONE,
+  //           GST_CLOCK_TIME_NONE,
+  //           GST_CLOCK_TIME_NONE,
+  //           TRUE,
+  //           1);
+        
+  //       if (event) {
+  //           if (gst_element_send_event(encoder, event)) {
+  //               g_print("Force-key-unit event sent successfully\n");
+  //           } else {
+  //               g_printerr("Failed to send force-key-unit event\n");
+  //           }
+  //       } else {
+  //           g_printerr("Failed to create force-key-unit event\n");
+  //       }
+  //   // 可选：添加调试日志
+  //   g_print("Force-IDR action called successfully\n");
+  // } else {
+  //   g_printerr("Encoder element not initialized!\n");
+  // }
 }
 
 static void signal_handler(int signal) {
@@ -309,6 +338,7 @@ int main(int argc, char* argv[]) {
   g_media.camera_sink = gst_bin_get_by_name(GST_BIN(g_media.camera_pipeline), "camera-sink");
   g_signal_connect(g_media.camera_sink, "new-sample", G_CALLBACK(on_video_data), NULL);
   g_object_set(g_media.camera_sink, "emit-signals", TRUE, NULL);
+  encoder = gst_bin_get_by_name(GST_BIN(g_media.camera_pipeline), "my_encoder");
 
   g_media.mic_pipeline = gst_parse_launch(MIC_PIPELINE, NULL);
   g_media.mic_sink = gst_bin_get_by_name(GST_BIN(g_media.mic_pipeline), "mic-sink");

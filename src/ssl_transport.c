@@ -105,9 +105,16 @@ int ssl_transport_connect(NetworkContext_t* net_ctx,
 
   LOGI("start to handshake");
 
+  int i=0;
   while ((ret = mbedtls_ssl_handshake(&net_ctx->ssl)) != 0) {
     if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
       LOGE("ssl handshake error: -0x%x", (unsigned int)-ret);
+      sleep(1);
+      i++;
+
+      if (i>10) {
+        return -1;
+      }
     }
   }
 
