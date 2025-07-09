@@ -23,7 +23,8 @@ typedef enum H264_NALU_TYPE {
 int reader_init() {
   FILE* video_fp = NULL;
   FILE* audio_fp = NULL;
-  char videofile[] = "test.264";
+  // char videofile[] = "test.264";
+  char videofile[] = "test1.264";
   char audiofile[] = "alaw08m.wav";
 
   video_fp = fopen(videofile, "rb");
